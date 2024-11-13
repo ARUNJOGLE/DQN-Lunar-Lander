@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunar Lander using DQN Algorithm</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Base Styling and Space Theme */
+
+
+        :root {
+            --primary-color: #76c7c0;
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            color: #FFFFFF;
+            margin: 0;
+            background: #0a0e1b url('./bg.gif');
+            background-size: cover;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(0, 0, 0, 0.85);
+            font-size: 2.5em;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            letter-spacing: 3px;
+            text-shadow: 1px 1px 5px var(--primary-color);
+        }
+
+        .section-container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .section {
+            background: rgba(0, 0, 0, 0.75);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid var(--primary-color);
+        }
+
+        .section h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        /* Input Form Styling */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 20px;
+        }
+
+        .form-grid label {
+            text-align: right;
+            padding-right: 10px;
+        }
+
+        .form-grid input {
+            padding: 6px;
+            border-radius: 5px;
+            border: none;
+            background: #222;
+            color: #FFF;
+        }
+
+        /* Button Styling */
+        #start-training-btn {
+            background-color: var(--primary-color);
+            color: #000;
+            padding: 12px 20px;
+            margin-top: 20px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #start-training-btn:hover {
+            background-color: #5aa19b;
+        }
+
+        #show-graphs {
+            background-color: var(--primary-color);
+            color: #000;
+            padding: 12px 20px;
+            margin-top: 20px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-decoration: none;
+        }
+
+
+
+        /* Loading Bar */
+        #loading-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #555;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+            display: block;
+        }
+
+        #loading-progress {
+            width: 0;
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 60s linear;
+        }
+
+        /* Video Display */
+        video {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            margin: 10px auto;
+        }
+
+        #summary {
+            color: white;
+            font-size: 1.1em;
+        }
+
+        #landing-status {
+            font-weight: bold;
+        }
+
+        /* Real-Time Lander Panel */
+        .real-time-panel {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .nav-screen {
+            width: 300px;
+            height: 300px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            position: relative;
+            background-color: #111;
+            background-image: url("animeimage.gif");
+            background-blend-mode: luminosity;
+            box-shadow: 0 0 10px var(--primary-color);
+            overflow: hidden;
+        }
+
+        .indicator-light {
+            width: 15px;
+            height: 15px;
+            background-color: red;
+            border-radius: 50%;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            animation: blink 1s infinite alternate;
+        }
+
+        @keyframes blink {
+            0% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
+        .charts-container {
+            width: 400px;
+        }
+
+        /* Additional Styles */
+        .chart {
+            margin-top: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            header {
+                font-size: 1.8em;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            video {
+                max-width: 100%;
+            }
+
+            .real-time-panel {
+                flex-direction: column;
+            }
+        }
+
+        #sub-head {
+            text-align: center;
+            text-decoration: none;
+        }
+
+        #sub-head>a {
+            text-decoration: none;
+            color: white;
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>Lunar Lander using DQN Algorithm</header>
+    <p id="sub-head"><a href="arunjaisankar.netlify.app" target="_blank"> ARUN JAISANKAR </a><mark> &copy; 2024. All
+            rights
+            reserved.</mark>
+    </p>
+
+    <div class="section-container">
+
+        <!-- Section 1: Input Data Form for Training -->
+        <div class="section" id="lander-data">
+            <h2>Training Data for the Lunar Lander</h2>
+            <form id="lander-inputs" class="form-grid">
+                <label>Learning Rate:</label><input type="text" name="learning_rate" placeholder="e.g., 0.001"
+                    value="0.001">
+                <label>Batch Size:</label><input type="text" name="batch_size" placeholder="e.g., 128" value="128">
+                <label>Buffer Size:</label><input type="text" name="buffer_size" placeholder="e.g., 10000"
+                    value="10000">
+                <label>Learning Starts:</label><input type="text" name="learning_starts" placeholder="e.g., 1000"
+                    value="1000">
+                <label>Gamma:</label><input type="text" name="gamma" placeholder="e.g., 0.99" value="0.99">
+                <label>Tau:</label><input type="text" name="tau" placeholder="e.g., 1" value="1">
+                <label>Target Update Interval:</label><input type="text" name="target_update_interval"
+                    placeholder="e.g., 250" value="250">
+                <label>Train Frequency:</label><input type="text" name="train_freq" placeholder="e.g., 4 steps"
+                    value="4">
+                <label>Max Grad Norm:</label><input type="text" name="max_grad_norm" placeholder="e.g., 10" value="10">
+                <label>Exploration Initial EPS:</label><input type="text" name="exploration_initial_eps"
+                    placeholder="e.g., 1" value="1">
+                <label>Exploration Final EPS:</label><input type="text" name="exploration_final_eps"
+                    placeholder="e.g., 0.05" value="0.05">
+                <label>Seed:</label><input type="text" name="seed" placeholder="e.g., 1" value="1">
+
+                <!-- Add more fields as needed -->
+            </form>
+        </div>
+
+        <!-- Start Training Button and Loading Bar -->
+        <div style="text-align: center;">
+            <button id="start-training-btn">Start Training</button>
+            <div id="loading-bar">
+                <div id="loading-progress"></div>
+            </div>
+        </div>
+        <!-- Section 2: Real-Time Lander Panel with Navigation Screen and Charts -->
+        <div class="section">
+            <h2>Real-Time Lander Status</h2>
+            <div class="real-time-panel">
+                <!-- Navigation Screen -->
+                <div class="nav-screen">
+                    <div class="indicator-light"></div>
+                    <p
+                        style="color: var(--primary-color); text-align: center; background-color:black; margin-top: 45%;">
+                        <strong>Lander Coordinates</strong>
+                    </p>
+                </div>
+                <!-- Charts for Fuel Level, Speed, and Altitude -->
+                <div class="charts-container">
+                    <canvas id="fuelChart" class="chart"></canvas>
+                    <canvas id="speedChart" class="chart"></canvas>
+                    <canvas id="altitudeChart" class="chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Section 3: Summary of Output -->
+        <div class="section" id="summary">
+            <h2>Summary of Output</h2>
+            <p><strong>Status:</strong> <span id="landing-status" style="color: orange;">Disconnection</span></p>
+        </div>
+
+        <!-- Video Outputs for Untrained and Trained Models -->
+        <div class="section">
+            <h2>Model Outcomes</h2>
+            <video id="untrained-video" controls>
+                <source src="./untrained.mov" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <video id="trained-video" controls>
+                <source src="./trained.mov" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+    </div>
+
+    <script>
+
+        <!-- custom delay timings -->
+        const delayTime = 60 * 1000;
+
+        document.getElementById('start-training-btn').addEventListener('click', function () {
+            const loadingBar = document.getElementById('loading-bar');
+            const loadingProgress = document.getElementById('loading-progress');
+            loadingBar.style.display = 'block';
+            loadingProgress.style.width = '100%';
+
+            setTimeout(function () {
+                loadingBar.style.display = 'none';
+                loadingProgress.style.width = '0%';
+                document.getElementById('landing-status').innerText = 'Landing Successful';
+                document.getElementById('landing-status').style.color = 'limegreen';
+
+                // Show videos after 5 seconds
+                document.getElementById('untrained-video').style.display = 'block';
+                document.getElementById('trained-video').style.display = 'block';
+            }, delayTime);
+        });
+
+        // Initializing Charts with Chart.js
+        const fuelChartCtx = document.getElementById('fuelChart').getContext('2d');
+        const speedChartCtx = document.getElementById('speedChart').getContext('2d');
+        const altitudeChartCtx = document.getElementById('altitudeChart').getContext('2d');
+
+        // Spline Chart (Smooth Line Chart)
+        const fuelChart = new Chart(fuelChartCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 20 }, (_, i) => i + 1),
+                datasets: [{
+                    label: 'Fuel Level',
+                    data: Array.from({ length: 20 }, () => Math.random() * 100),
+                    borderColor: 'var(--primary-color)',
+                    fill: true,
+                    backgroundColor: 'rgba(40, 255, 237, 0.596)',
+                    cubicInterpolationMode: 'monotone', // Spline effect
+                    tension: 0.4 // Makes the curve smoother
+                }]
+            }
+        });
+
+        // Range Area Chart (Using two datasets for range)
+        const speedChart = new Chart(speedChartCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 20 }, (_, i) => i + 1),
+                datasets: [{
+                    label: 'Speed Min',
+                    data: Array.from({ length: 20 }, () => Math.random() * 50),
+                    borderColor: 'var(--primary-color)',
+                    fill: false
+                }, {
+                    label: 'Speed Max',
+                    data: Array.from({ length: 20 }, () => Math.random() * 100),
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    fill: true,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)' // Range fill
+                }]
+            }
+        });
+
+        // Step Line Chart (Stepped Line Chart)
+        const altitudeChart = new Chart(altitudeChartCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 20 }, (_, i) => i + 1),
+                datasets: [{
+                    label: 'Altitude',
+                    data: Array.from({ length: 20 }, () => Math.random() * 100),
+                    borderColor: 'var(--primary-color)',
+                    fill: true,
+                    backgroundColor: 'rgba(40, 255, 237, 0.596)',
+                    stepped: 'before', // Step line (can also use 'middle' or 'after')
+                    tension: 0 // No curve, pure steps
+                }]
+            }
+        });
+
+        // Function to update the graphs and add blinking data point
+        function updateGraph() {
+            // Update data for fuel chart (spline chart)
+            fuelChart.data.datasets[0].data.push(Math.random() * 100);
+            fuelChart.data.labels.push(fuelChart.data.labels.length + 1);
+            fuelChart.update();
+
+            // Update data for speed chart (range area chart)
+            speedChart.data.datasets[0].data.push(Math.random() * 50);  // Speed Min
+            speedChart.data.datasets[1].data.push(Math.random() * 100); // Speed Max
+            speedChart.data.labels.push(speedChart.data.labels.length + 1);
+            speedChart.update();
+
+            // Update data for altitude chart (step line chart)
+            altitudeChart.data.datasets[0].data.push(Math.random() * 100);
+            altitudeChart.data.labels.push(altitudeChart.data.labels.length + 1);
+            altitudeChart.update();
+
+            // Add a random blinking data point (blink effect)
+            const blinkIndex = Math.floor(Math.random() * 20);
+            fuelChart.data.datasets[0].data[blinkIndex] = Math.random() * 100;
+            speedChart.data.datasets[0].data[blinkIndex] = Math.random() * 50;  // Speed Min
+            speedChart.data.datasets[1].data[blinkIndex] = Math.random() * 100; // Speed Max
+            altitudeChart.data.datasets[0].data[blinkIndex] = Math.random() * 100;
+
+            // Update the charts with new data (to show blinking effect)
+            fuelChart.update();
+            speedChart.update();
+            altitudeChart.update();
+        }
+
+        document.getElementById('start-training-btn').addEventListener('click', () => {
+            let secondsElapsed = 0;
+
+            // Start live update after 5 seconds delay
+            setTimeout(() => {
+                const interval = setInterval(() => {
+                    if (secondsElapsed >= 300) { // Stop after 5 minutes (300 seconds)
+                        clearInterval(interval);
+                    } else {
+                        updateGraph();
+                        secondsElapsed++;
+                    }
+                }, 1000);
+            }, delayTime); // Delay start for 5 seconds
+        });
+
+
+        document.getElementById('untrained-video').playbackRate = 2;
+        document.getElementById('trained-video').playbackRate = 2;
+    </script>
+
+</body>
+
+</html>
